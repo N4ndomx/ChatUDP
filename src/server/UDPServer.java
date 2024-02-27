@@ -12,7 +12,7 @@ import java.util.Map;
 public class UDPServer {
     private DatagramSocket socket;
     private Map<String, InetAddress> clients = new HashMap<>();
-    private static final String _IP = "192.168.137.69"; // Cambie por su IP
+    private static final String _IP = "192.168.79.42"; // Cambie por su IP
 
     public UDPServer(int port) throws SocketException, UnknownHostException {
         InetAddress ip = InetAddress.getByName(_IP);
@@ -60,15 +60,17 @@ public class UDPServer {
         System.out.println("Mensaje recibido: " + message);
         InetAddress clientAddress = packet.getAddress();
         int clientPort = packet.getPort();
-
+        String cadena= message.split(":")[0];
         String clientKey = clientAddress.getHostAddress() + ":" + clientPort;
 
         if (message.startsWith("CONNECT")) {
             handleConnection(clientAddress, clientPort);
         } else if (message.startsWith("DISCONNECT")) {
             handleDisconnection(clientAddress, clientPort);
-        } else {
-            // Retransmitir el mensaje a todos los clientes, incluyendo la IP del remitente
+        } else if(cadena.startsWith("PRIVATE")){
+            sendPrivateMessage(message, clientKey);
+            //metodo para mandar mensaje privado
+        }else{
             broadcast(clientKey + ": " + message);
         }
     }
@@ -108,7 +110,7 @@ public class UDPServer {
     }
 
     public static void main(String[] args) throws UnknownHostException {
-        int port = 12345; // Puedes cambiar esto al puerto que desees
+        int port = 1234; // Puedes cambiar esto al puerto que desees
         try {
             UDPServer server = new UDPServer(port);
             server.listen();
