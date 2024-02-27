@@ -12,7 +12,7 @@ import java.util.Map;
 public class UDPServer {
     private DatagramSocket socket;
     private Map<String, InetAddress> clients = new HashMap<>();
-    private static final String _IP = "192.168.137.69"; // Cambie por su IP
+    private static final String _IP = "192.168.79.111"; // Cambie por su IP
 
     public UDPServer(int port) throws SocketException, UnknownHostException {
         InetAddress ip = InetAddress.getByName(_IP);
@@ -70,6 +70,7 @@ public class UDPServer {
         } else {
             // Retransmitir el mensaje a todos los clientes, incluyendo la IP del remitente
             broadcast(clientKey + ": " + message);
+            sendPrivateMessage("test private ", clientKey);
         }
     }
 
@@ -86,12 +87,14 @@ public class UDPServer {
         InetAddress recipientAddress = clients.get(recipientKey);
         if (recipientAddress != null) {
             int recipientPort = Integer.parseInt(recipientKey.split(":")[1]);
+
             sendData(message, recipientAddress, recipientPort);
         }
     }
 
     public void listen() {
-        System.out.println("Servidor iniciado. Escuchando en el puerto: " + socket.getLocalPort());
+        System.out.println("Servidor iniciado. Escuchando en el puerto: " + socket.getLocalPort() + " "
+                + socket.getLocalAddress());
 
         while (true) {
             try {
