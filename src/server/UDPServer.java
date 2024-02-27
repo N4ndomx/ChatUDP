@@ -1,6 +1,8 @@
 package server;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -12,7 +14,7 @@ import java.util.Map;
 public class UDPServer {
     private DatagramSocket socket;
     private Map<String, InetAddress> clients = new HashMap<>();
-    private static final String _IP = "192.168.137.69"; // Cambie por su IP
+    private static final String _IP = "10.40.6.195"; // Cambie por su IP
 
     public UDPServer(int port) throws SocketException, UnknownHostException {
         InetAddress ip = InetAddress.getByName(_IP);
@@ -27,17 +29,24 @@ public class UDPServer {
 
         // Enviar notificación a todos los clientes
         broadcast("Cliente " + clientKey + " se ha conectado");
-
     }
 
     private void handleDisconnection(InetAddress clientAddress, int clientPort) throws IOException {
         String clientKey = clientAddress.getHostAddress() + ":" + clientPort;
-        clients.remove(clientKey);
+        InetAddress clientInet = clients.get(clientKey);
 
-        System.out.println("Cliente desconectado: " + clientKey);
+        if (clientInet != null) {
+            // Enviar mensaje de desconexión al cliente
+            String disconnectMessage = "¡Has sido desconectado por el servidor!";
+            sendData(disconnectMessage, clientInet, clientPort);
 
-        // Enviar notificación a todos los clientes
-        broadcast("Cliente " + clientKey + " se ha desconectado");
+            // Eliminar al cliente de la lista
+            clients.remove(clientKey);
+            System.out.println("Cliente desconectado: " + clientKey);
+
+            // Enviar notificación a todos los clientes
+            broadcast("Cliente " + clientKey + " se ha desconectado");
+        }
     }
 
     public void receiveData() throws IOException {
@@ -93,6 +102,7 @@ public class UDPServer {
     public void listen() {
         System.out.println("Servidor iniciado. Escuchando en el puerto: " + socket.getLocalPort());
 
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         while (true) {
             try {
                 DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
@@ -100,11 +110,36 @@ public class UDPServer {
 
                 // Procesar el paquete recibido
                 processData(packet);
+
+                // Leer comando desde la consola
+                String command = reader.readLine();
+                if (command.startsWith("DISCONNECT")) {
+                    String[] parts = command.split("\\s+");
+                    if (parts.length == 2) {
+                        String ipToDisconnect = parts[1];
+                        disconnectClient(ipToDisconnect);
+                    } else {
+                        System.out.println("Formato de comando incorrecto. Uso: DISCONNECT + IP");
+                    }
+                }
             } catch (IOException e) {
                 System.err.println("Error en la conexión: " + e.getMessage());
                 // Manejar adecuadamente la excepción
             }
         }
+    }
+
+    private void disconnectClient(String ipToDisconnect) throws IOException {
+        for (Map.Entry<String, InetAddress> entry : clients.entrySet()) {
+            String clientKey = entry.getKey();
+            InetAddress clientAddress = entry.getValue();
+
+            if (clientAddress.getHostAddress().equals(ipToDisconnect)) {
+                handleDisconnection(clientAddress, Integer.parseInt(clientKey.split(":")[1]));
+                return;
+            }
+        }
+        System.out.println("No se encontró ningún cliente con la IP especificada.");
     }
 
     public static void main(String[] args) throws UnknownHostException {
