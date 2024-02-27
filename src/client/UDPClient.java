@@ -55,8 +55,12 @@ public class UDPClient {
         sendMessage("DISCONNECT");
     }
 
+    public void privates(String msg) {
+        sendMessage("PRIVATE:" + msg);
+    }
+
     public static void main(String[] args) throws SocketException, UnknownHostException {
-        UDPClient client = new UDPClient("192.168.79.111", 12345);
+        UDPClient client = new UDPClient("192.168.137.69", 1234);
         client.receiveMessages();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
