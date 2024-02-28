@@ -26,7 +26,7 @@ public class PrivateChatUI {
     }
 
     private void createUI() {
-        frame = new JFrame("Private Client + " + name);
+        frame = new JFrame("Private Client  " + name);
         chatArea = new JTextArea(20, 30);
         chatArea.setEditable(false);
         messageField = new JTextField(25);
@@ -46,7 +46,6 @@ public class PrivateChatUI {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String message = messageField.getText();
-                client.privates(message);
                 messageField.setText("");
             }
         });

@@ -12,7 +12,7 @@ import java.util.Map;
 public class UDPServer {
     private DatagramSocket socket;
     private Map<String, InetAddress> clients = new HashMap<>();
-    private String _IP = "192.168.137.69"; // Cambie por su IP
+    private String _IP = "192.168.1.68"; // Cambie por su IP
 
     public UDPServer(int port) throws SocketException, UnknownHostException {
         InetAddress ip = InetAddress.getByName(_IP);
@@ -62,6 +62,8 @@ public class UDPServer {
         InetAddress clientAddress = packet.getAddress();
         int clientPort = packet.getPort();
         String cadena = message.split(":")[0];
+        String ipDir = message.split(":")[1];
+
         String clientKey = clientAddress.getHostAddress() + ":" + clientPort;
 
         if (message.startsWith("CONNECT")) {
@@ -69,12 +71,12 @@ public class UDPServer {
         } else if (message.startsWith("DISCONNECT")) {
             handleDisconnection(clientAddress, clientPort);
         } else if (cadena.startsWith("PRIVATE")) {
-            sendPrivateMessage(message, clientKey);
+            sendPrivateMessage(message, ipDir);
             // metodo para mandar mensaje privado
         } else {
             broadcast(clientKey + ": " + message);
-            sendPrivateMessage("test private ", clientKey);
         }
+        printClients();
     }
 
     public void broadcast(String message) throws IOException {
@@ -83,6 +85,15 @@ public class UDPServer {
 
             int clientPort = Integer.parseInt(clientKey.split(":")[1]);
             sendData(message, clientAddress, clientPort);
+        }
+    }
+
+    public void printClients() throws IOException {
+        for (String clientKey : clients.keySet()) {
+            InetAddress clientAddress = clients.get(clientKey);
+
+            int clientPort = Integer.parseInt(clientKey.split(":")[1]);
+            System.out.println("Cliente : " + clientAddress.toString() + " : " + clientPort);
         }
     }
 
