@@ -14,7 +14,7 @@ import java.util.Map;
 public class UDPServer {
     private DatagramSocket socket;
     private Map<String, InetAddress> clients = new HashMap<>();
-    private static final String _IP = "10.40.6.195"; // Cambie por su IP
+    private static final String _IP = "192.168.1.106"; // Cambie por su IP
 
     public UDPServer(int port) throws SocketException, UnknownHostException {
         InetAddress ip = InetAddress.getByName(_IP);
@@ -102,16 +102,23 @@ public class UDPServer {
     public void listen() {
         System.out.println("Servidor iniciado. Escuchando en el puerto: " + socket.getLocalPort());
 
+        Thread receiveThread = new Thread(() -> {
+            while (true) {
+                try {
+                    DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
+                    socket.receive(packet);
+
+                    processData(packet);
+                } catch (IOException e) {
+                    System.err.println("Error en la conexión: " + e.getMessage());
+                }
+            }
+        });
+        receiveThread.start();
+
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         while (true) {
             try {
-                DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
-                socket.receive(packet);
-
-                // Procesar el paquete recibido
-                processData(packet);
-
-                // Leer comando desde la consola
                 String command = reader.readLine();
                 if (command.startsWith("DISCONNECT")) {
                     String[] parts = command.split("\\s+");
@@ -123,8 +130,7 @@ public class UDPServer {
                     }
                 }
             } catch (IOException e) {
-                System.err.println("Error en la conexión: " + e.getMessage());
-                // Manejar adecuadamente la excepción
+                System.err.println("Error en la entrada de consola: " + e.getMessage());
             }
         }
     }
@@ -143,7 +149,7 @@ public class UDPServer {
     }
 
     public static void main(String[] args) throws UnknownHostException {
-        int port = 12345; // Puedes cambiar esto al puerto que desees
+        int port = 12345; 
         try {
             UDPServer server = new UDPServer(port);
             server.listen();
