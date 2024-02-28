@@ -21,7 +21,7 @@ public class UDPServer {
 
     private void handleConnection(InetAddress clientAddress, int clientPort) throws IOException {
 
-        String clientKey = clientAddress.getHostAddress() + ":" + clientPort;
+        String clientKey = clientAddress.getHostAddress() + "/" + clientPort;
         clients.put(clientKey, clientAddress);
 
         System.out.println("Cliente conectado: " + clientKey);
@@ -32,7 +32,7 @@ public class UDPServer {
     }
 
     private void handleDisconnection(InetAddress clientAddress, int clientPort) throws IOException {
-        String clientKey = clientAddress.getHostAddress() + ":" + clientPort;
+        String clientKey = clientAddress.getHostAddress() + "/" + clientPort;
         clients.remove(clientKey);
 
         System.out.println("Cliente desconectado: " + clientKey);
@@ -62,28 +62,29 @@ public class UDPServer {
         InetAddress clientAddress = packet.getAddress();
         int clientPort = packet.getPort();
         String cadena = message.split(":")[0];
-        String ipDir = message.split(":")[1];
 
-        String clientKey = clientAddress.getHostAddress() + ":" + clientPort;
+        String clientKey = clientAddress.getHostAddress() + "/" + clientPort;
 
         if (message.startsWith("CONNECT")) {
             handleConnection(clientAddress, clientPort);
         } else if (message.startsWith("DISCONNECT")) {
             handleDisconnection(clientAddress, clientPort);
         } else if (cadena.startsWith("PRIVATE")) {
-            sendPrivateMessage(message, ipDir);
+            String ipDir = message.split(":")[1];
+            String msg = message.split(":")[2];
+            sendPrivateMessage(clientKey + ": " + msg, ipDir);
             // metodo para mandar mensaje privado
         } else {
             broadcast(clientKey + ": " + message);
         }
-        printClients();
+        // printClients();
     }
 
     public void broadcast(String message) throws IOException {
         for (String clientKey : clients.keySet()) {
             InetAddress clientAddress = clients.get(clientKey);
 
-            int clientPort = Integer.parseInt(clientKey.split(":")[1]);
+            int clientPort = Integer.parseInt(clientKey.split("/")[1]);
             sendData(message, clientAddress, clientPort);
         }
     }
@@ -92,15 +93,15 @@ public class UDPServer {
         for (String clientKey : clients.keySet()) {
             InetAddress clientAddress = clients.get(clientKey);
 
-            int clientPort = Integer.parseInt(clientKey.split(":")[1]);
-            System.out.println("Cliente : " + clientAddress.toString() + " : " + clientPort);
+            int clientPort = Integer.parseInt(clientKey.split("/")[1]);
+            System.out.println("Cliente : " + clientAddress.toString() + " / " + clientPort);
         }
     }
 
     public void sendPrivateMessage(String message, String recipientKey) throws IOException {
         InetAddress recipientAddress = clients.get(recipientKey);
         if (recipientAddress != null) {
-            int recipientPort = Integer.parseInt(recipientKey.split(":")[1]);
+            int recipientPort = Integer.parseInt(recipientKey.split("/")[1]);
 
             sendData(message, recipientAddress, recipientPort);
         }

@@ -26,6 +26,7 @@ public class UDPClient {
     public void sendMessage(String message) {
         try {
             System.out.println("Enviando mensaje: " + message);
+
             byte[] buffer = message.getBytes();
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length, serverAddress, serverPort);
             socket.send(packet);

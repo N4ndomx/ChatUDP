@@ -57,7 +57,10 @@ public class ChatClientUI {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String name = JOptionPane.showInputDialog(panel, "Chat privado para :");
-                client.privates(messageField.getText(), name);
+                if (!name.isEmpty()) {
+                    client.privates(messageField.getText(), name);
+
+                }
             }
         });
     }
