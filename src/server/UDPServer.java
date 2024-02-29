@@ -19,26 +19,26 @@ public class UDPServer {
         socket = new DatagramSocket(port, ip);
     }
 
-    private void handleConnection(InetAddress clientAddress, int clientPort) throws IOException {
+    private void handleConnection(InetAddress clientAddress, int clientPort, String username) throws IOException {
 
         String clientKey = clientAddress.getHostAddress() + "/" + clientPort;
         clients.put(clientKey, clientAddress);
 
-        System.out.println("Cliente conectado: " + clientKey);
+        System.out.println("Cliente conectado: " + username);
 
         // Enviar notificación a todos los clientes
-        broadcast("Cliente " + clientKey + " se ha conectado");
+        broadcast( username + " se ha conectado");
 
     }
 
-    private void handleDisconnection(InetAddress clientAddress, int clientPort) throws IOException {
+    private void handleDisconnection(InetAddress clientAddress, int clientPort, String username) throws IOException {
         String clientKey = clientAddress.getHostAddress() + "/" + clientPort;
         clients.remove(clientKey);
 
-        System.out.println("Cliente desconectado: " + clientKey);
+        System.out.println("Cliente desconectado: " + username);
 
         // Enviar notificación a todos los clientes
-        broadcast("Cliente " + clientKey + " se ha desconectado");
+        broadcast( username + " se ha desconectado");
     }
 
     public void receiveData() throws IOException {
@@ -62,20 +62,21 @@ public class UDPServer {
         InetAddress clientAddress = packet.getAddress();
         int clientPort = packet.getPort();
         String cadena = message.split(":")[0];
-
+        String username = System.getProperty("user.name");
+        String user = username + "/" +  clientPort;
         String clientKey = clientAddress.getHostAddress() + "/" + clientPort;
 
         if (message.startsWith("CONNECT")) {
-            handleConnection(clientAddress, clientPort);
+            handleConnection(clientAddress, clientPort, username);
         } else if (message.startsWith("DISCONNECT")) {
-            handleDisconnection(clientAddress, clientPort);
+            handleDisconnection(clientAddress, clientPort, username);
         } else if (cadena.startsWith("PRIVATE")) {
             String ipDir = message.split(":")[1];
             String msg = message.split(":")[2];
             sendPrivateMessage(clientKey + ": " + msg, ipDir);
             // metodo para mandar mensaje privado
         } else {
-            broadcast(clientKey + ": " + message);
+            broadcast(user + ": " + message);
         }
         // printClients();
     }
