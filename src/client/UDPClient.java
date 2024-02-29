@@ -61,7 +61,7 @@ public class UDPClient {
     }
 
     public static void main(String[] args) throws SocketException, UnknownHostException {
-        UDPClient client = new UDPClient("192.168.1.68", 1234);
+        UDPClient client = new UDPClient("192.168.1.65", 1234);
         client.receiveMessages();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
