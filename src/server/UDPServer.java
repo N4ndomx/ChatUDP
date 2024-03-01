@@ -12,7 +12,8 @@ import java.util.Map;
 public class UDPServer {
     private DatagramSocket socket;
     private Map<String, InetAddress> clients = new HashMap<>();
-    private static final String _IP = "192.168.137.69"; // Cambie por su IP
+    private static Map<String, ChatPrivado> chatRooms = new HashMap<>();
+    private final String _IP = InetAddress.getLocalHost().getHostAddress(); // Cambie por su IP
 
     public UDPServer(int port) throws SocketException, UnknownHostException {
         InetAddress ip = InetAddress.getByName(_IP);
@@ -57,20 +58,58 @@ public class UDPServer {
 
     public void processData(DatagramPacket packet) throws IOException {
         String message = new String(packet.getData(), 0, packet.getLength());
-        System.out.println("Mensaje recibido: " + message);
+        System.out.println("Mensaje recibido-server: " + message);
         InetAddress clientAddress = packet.getAddress();
         int clientPort = packet.getPort();
-
         String clientKey = clientAddress.getHostAddress() + ":" + clientPort;
+        String conpriv = message.split(":")[0];
 
         if (message.startsWith("CONNECT")) {
             handleConnection(clientAddress, clientPort);
         } else if (message.startsWith("DISCONNECT")) {
             handleDisconnection(clientAddress, clientPort);
+        } else if (conpriv.startsWith("JOINPRIVADA")) {
+            String targetUserIP = message.split(":")[1];
+            String targetUserPuerto = message.split(":")[2];
+
+            joinPrivada(clientKey, targetUserIP + ":" + targetUserPuerto);
+        } else if (conpriv.startsWith("EXITPRIVADA")) {
+            String targetUserIP = message.split(":")[1];
+            String targetUserPuerto = message.split(":")[2];
+            exitPrivada(clientKey, targetUserIP + ":" + targetUserPuerto);
+        } else if (conpriv.startsWith("PRIVADA")) {
+            String targetUser = message.split(":")[1];
+            String targetUserPuerto = message.split(":")[2];
+            String privatemsg = message.split(":")[3];
+            String keySendUser = targetUser + ":" + targetUserPuerto;
+            sendPrivateMessage(keySendUser + ":" + privatemsg, keySendUser);
+            sendPrivateMessage(clientKey + ":" + privatemsg, clientKey);
+
         } else {
             // Retransmitir el mensaje a todos los clientes, incluyendo la IP del remitente
             broadcast(clientKey + ": " + message);
         }
+    }
+
+    public void joinPrivada(String username1, String username2) throws IOException {
+
+        String roomKey = username1 + "+" + username2;
+        ChatPrivado p = new ChatPrivado(roomKey);
+        p.addUser(username1);
+        p.addUser(username2);
+        chatRooms.computeIfAbsent(roomKey, k -> p);
+        broadcast("Se Inicio Sala Privada entre " + roomKey);
+        sendPrivateMessage("JOINPRIVADA", username1);
+        sendPrivateMessage("JOINPRIVADA", username2);
+
+    }
+
+    public void exitPrivada(String username1, String username2) throws IOException {
+        String roomKey = username1 + "+" + username2;
+        chatRooms.remove(roomKey);
+        broadcast("Se Cerro Sala Privada entre " + roomKey);
+        sendPrivateMessage("EXITPRIVADA", username1);
+        sendPrivateMessage("EXITPRIVADA", username2);
     }
 
     public void broadcast(String message) throws IOException {
