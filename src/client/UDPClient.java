@@ -12,6 +12,7 @@ public class UDPClient {
     private InetAddress serverAddress;
     private int serverPort;
     private ChatClientUI ui;
+    PrivateUI uip;
 
     public UDPClient(String serverIP, int serverPort) throws SocketException, UnknownHostException {
         socket = new DatagramSocket();
@@ -42,6 +43,13 @@ public class UDPClient {
                 try {
                     socket.receive(packet);
                     String receivedMessage = new String(packet.getData(), 0, packet.getLength());
+                    if (receivedMessage.startsWith("JOINPRIVADA")) {
+                        uip = new PrivateUI(this);
+
+                    }
+                    if (receivedMessage.startsWith("PRIVADA")) {
+                        uip.displayMessage(receivedMessage);
+                    }
                     ui.displayMessage(receivedMessage);
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -56,7 +64,7 @@ public class UDPClient {
     }
 
     public static void main(String[] args) throws SocketException, UnknownHostException {
-        UDPClient client = new UDPClient("192.168.137.69", 12345);
+        UDPClient client = new UDPClient("192.168.1.68", 12345);
         client.receiveMessages();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

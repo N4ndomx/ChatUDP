@@ -66,6 +66,8 @@ public class UDPServer {
 
         if (message.startsWith("CONNECT")) {
             handleConnection(clientAddress, clientPort);
+        } else if (message.startsWith("USERS")) {
+            getAllUsers();
         } else if (message.startsWith("DISCONNECT")) {
             handleDisconnection(clientAddress, clientPort);
         } else if (conpriv.startsWith("JOINPRIVADA")) {
@@ -82,7 +84,7 @@ public class UDPServer {
             String targetUserPuerto = message.split(":")[2];
             String privatemsg = message.split(":")[3];
             String keySendUser = targetUser + ":" + targetUserPuerto;
-            sendPrivateMessage(keySendUser + ":" + privatemsg, keySendUser);
+            sendPrivateMessage(clientKey + ":" + privatemsg, keySendUser);
             sendPrivateMessage(clientKey + ":" + privatemsg, clientKey);
 
         } else {
@@ -110,6 +112,21 @@ public class UDPServer {
         broadcast("Se Cerro Sala Privada entre " + roomKey);
         sendPrivateMessage("EXITPRIVADA", username1);
         sendPrivateMessage("EXITPRIVADA", username2);
+    }
+
+    public void getAllUsers() throws IOException {
+        StringBuilder allUsers = new StringBuilder();
+
+        for (String clientKey : clients.keySet()) {
+            allUsers.append(clientKey).append(",");
+        }
+
+        // Eliminar la última coma si hay usuarios
+        if (allUsers.length() > 0) {
+            allUsers.deleteCharAt(allUsers.length() - 1);
+        }
+
+        broadcast(allUsers.toString());
     }
 
     public void broadcast(String message) throws IOException {
