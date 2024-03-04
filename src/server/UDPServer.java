@@ -10,6 +10,7 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 public class UDPServer {
     private DatagramSocket socket;
@@ -81,27 +82,32 @@ public class UDPServer {
         if (message.startsWith("CONNECT")) {
             String username = message.split(":")[1];
             handleConnection(username, clientAddress, clientPort);
+            getAllUsers();
         } else if (message.startsWith("USERS")) {
             getAllUsers();
         } else if (message.startsWith("DISCONNECT")) {
             handleDisconnection(clientAddress, clientPort);
+            getAllUsers();
         } else if (conpriv.startsWith("JOINPRIVADA")) {
             String targetUserIP = message.split(":")[1];
             String targetUserPuerto = message.split(":")[2];
 
             joinPrivada(clientKey, targetUserIP + ":" + targetUserPuerto);
         } else if (conpriv.startsWith("EXITPRIVADA")) {
+            String targetUser = message.split(":")[1];
+            String userdest = message.split(":")[2];
+            String roomkey = message.split(":")[3];
+
+            exitPrivada(targetUser, userdest, roomkey);
+        } else if (conpriv.startsWith("PRIVADA")) {
             String targetUserIP = message.split(":")[1];
             String targetUserPuerto = message.split(":")[2];
-            exitPrivada(clientKey, targetUserIP + ":" + targetUserPuerto);
-        } else if (conpriv.startsWith("PRIVADA")) {
-            String targetUser = message.split(":")[1];
-            String targetUserPuerto = message.split(":")[2];
             String privatemsg = message.split(":")[3];
-            String keySendUser = targetUser + ":" + targetUserPuerto;
+            String roomKey = message.split(":")[4];
+            String keySendUser = targetUserIP + ":" + targetUserPuerto;
             String userRemitente = usernames.get(clientKey);
-            sendPrivateMessage(userRemitente + ":" + privatemsg, keySendUser);
-            sendPrivateMessage(userRemitente + ":" + privatemsg, clientKey);
+            sendPrivateMessage("PRIVADA:" + userRemitente + ":" + privatemsg + ":" + roomKey, keySendUser);
+            sendPrivateMessage("PRIVADA:" + userRemitente + ":" + privatemsg + ":" + roomKey, clientKey);
 
         } else {
             // Retransmitir el mensaje a todos los clientes, incluyendo la IP del remitente
@@ -114,35 +120,34 @@ public class UDPServer {
     public void joinPrivada(String clientKey1, String clientKey2) throws IOException {
         String user1 = usernames.get(clientKey1);
         String user2 = usernames.get(clientKey2);
-
-        String roomKey = clientKey1 + "+" + clientKey2;
+        Random n = new Random();
+        String roomKey = clientKey1.split(":")[0] + "+" + clientKey2.split(":")[0] + String.valueOf(n.nextInt(100));
         ChatPrivado p = new ChatPrivado(roomKey);
         p.addUser(clientKey1);
         p.addUser(clientKey2);
         chatRooms.computeIfAbsent(roomKey, k -> p);
         broadcast("Se Inicio Sala Privada entre " + user1 + " y " + user2);
-        sendPrivateMessage("JOINPRIVADA", clientKey1);
-        sendPrivateMessage("JOINPRIVADA", clientKey2);
+
+        sendPrivateMessage("JOINPRIVADA:" + user2 + ":" + clientKey2.split(":")[0] + "/" + clientKey2.split(":")[1]
+                + ":" + roomKey, clientKey1);
+        sendPrivateMessage("JOINPRIVADA:" + user1 + ":" + clientKey1.split(":")[0] + "/" + clientKey1.split(":")[1]
+                + ":" + roomKey, clientKey2);
 
     }
 
-    public void exitPrivada(String clientKey1, String clientKey2) throws IOException {
-        String roomKey = clientKey1 + "+" + clientKey2;
-        String user1 = usernames.get(clientKey1);
-        String user2 = usernames.get(clientKey2);
+    public void exitPrivada(String clientKey1, String clientKey2, String roomKey) throws IOException {
         chatRooms.remove(roomKey);
 
-        broadcast("Se Cerro Sala Privada entre " + user1 + " y " + user2);
-        sendPrivateMessage("EXITPRIVADA", clientKey1);
-        sendPrivateMessage("EXITPRIVADA", clientKey2);
+        broadcast("Se Cerro Sala Privada entre " + clientKey1 + " y " + clientKey2);
+        // sendPrivateMessage("EXITPRIVADA", clientKey1);
+        // sendPrivateMessage("EXITPRIVADA", clientKey2);
     }
 
     public void getAllUsers() throws IOException {
         StringBuilder allUsers = new StringBuilder();
 
         for (String clientKey : usernames.keySet()) {
-
-            allUsers.append(usernames.get(clientKey)).append(",");
+            allUsers.append(usernames.get(clientKey) + ":" + clientKey).append(",");
         }
 
         // Eliminar la última coma si hay usuarios
@@ -150,7 +155,7 @@ public class UDPServer {
             allUsers.deleteCharAt(allUsers.length() - 1);
         }
 
-        broadcast(allUsers.toString());
+        broadcast("USERS/" + allUsers.toString());
     }
 
     public void broadcast(String message) throws IOException {
@@ -171,7 +176,7 @@ public class UDPServer {
     }
 
     public void listen() {
-        System.out.println("Servidor iniciado. Escuchando en el puerto: " + socket.getLocalPort());
+        System.out.println("Servidor iniciado." + _IP + " Escuchando en el puerto: " + socket.getLocalPort());
         Thread receiveThread = new Thread(() -> {
             while (true) {
                 try {
