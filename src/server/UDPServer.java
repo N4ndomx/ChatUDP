@@ -14,6 +14,7 @@ import java.util.Map;
 public class UDPServer {
     private DatagramSocket socket;
     private Map<String, InetAddress> clients = new HashMap<>();
+    private Map<String, String> usernames = new HashMap<>();
     private static Map<String, ChatPrivado> chatRooms = new HashMap<>();
     private final String _IP = InetAddress.getLocalHost().getHostAddress(); // Cambie por su IP
 
@@ -22,20 +23,22 @@ public class UDPServer {
         socket = new DatagramSocket(port, ip);
     }
 
-    private void handleConnection(InetAddress clientAddress, int clientPort) throws IOException {
+    private void handleConnection(String username, InetAddress clientAddress, int clientPort) throws IOException {
         String clientKey = clientAddress.getHostAddress() + ":" + clientPort;
         clients.put(clientKey, clientAddress);
+        usernames.put(clientKey, username);
 
-        System.out.println("Cliente conectado: " + clientKey);
+        System.out.println("Cliente conectado: " + clientKey + "->" + username);
 
         // Enviar notificación a todos los clientes
-        broadcast("Cliente " + clientKey + " se ha conectado");
+        broadcast("Cliente " + username + " se ha conectado");
 
     }
 
     private void handleDisconnection(InetAddress clientAddress, int clientPort) throws IOException {
         String clientKey = clientAddress.getHostAddress() + ":" + clientPort;
         InetAddress clientInet = clients.get(clientKey);
+        String username = usernames.get(clientKey);
 
         if (clientInet != null) {
             // Enviar mensaje de desconexión al cliente
@@ -44,10 +47,11 @@ public class UDPServer {
 
             // Eliminar al cliente de la lista
             clients.remove(clientKey);
-            System.out.println("Cliente desconectado: " + clientKey);
+            usernames.remove(clientKey);
+            System.out.println("Cliente desconectado: " + username);
 
             // Enviar notificación a todos los clientes
-            broadcast("Cliente " + clientKey + " se ha desconectado");
+            broadcast("Cliente " + clientKey + "->" + username + " se ha desconectado");
         }
     }
 
@@ -75,7 +79,8 @@ public class UDPServer {
         String conpriv = message.split(":")[0];
 
         if (message.startsWith("CONNECT")) {
-            handleConnection(clientAddress, clientPort);
+            String username = message.split(":")[1];
+            handleConnection(username, clientAddress, clientPort);
         } else if (message.startsWith("USERS")) {
             getAllUsers();
         } else if (message.startsWith("DISCONNECT")) {
@@ -94,41 +99,50 @@ public class UDPServer {
             String targetUserPuerto = message.split(":")[2];
             String privatemsg = message.split(":")[3];
             String keySendUser = targetUser + ":" + targetUserPuerto;
-            sendPrivateMessage(clientKey + ":" + privatemsg, keySendUser);
-            sendPrivateMessage(clientKey + ":" + privatemsg, clientKey);
+            String userRemitente = usernames.get(clientKey);
+            sendPrivateMessage(userRemitente + ":" + privatemsg, keySendUser);
+            sendPrivateMessage(userRemitente + ":" + privatemsg, clientKey);
 
         } else {
             // Retransmitir el mensaje a todos los clientes, incluyendo la IP del remitente
-            broadcast(clientKey + ": " + message);
+            String userRemitente = usernames.get(clientKey);
+
+            broadcast(userRemitente + ": " + message);
         }
     }
 
-    public void joinPrivada(String username1, String username2) throws IOException {
+    public void joinPrivada(String clientKey1, String clientKey2) throws IOException {
+        String user1 = usernames.get(clientKey1);
+        String user2 = usernames.get(clientKey2);
 
-        String roomKey = username1 + "+" + username2;
+        String roomKey = clientKey1 + "+" + clientKey2;
         ChatPrivado p = new ChatPrivado(roomKey);
-        p.addUser(username1);
-        p.addUser(username2);
+        p.addUser(clientKey1);
+        p.addUser(clientKey2);
         chatRooms.computeIfAbsent(roomKey, k -> p);
-        broadcast("Se Inicio Sala Privada entre " + roomKey);
-        sendPrivateMessage("JOINPRIVADA", username1);
-        sendPrivateMessage("JOINPRIVADA", username2);
+        broadcast("Se Inicio Sala Privada entre " + user1 + " y " + user2);
+        sendPrivateMessage("JOINPRIVADA", clientKey1);
+        sendPrivateMessage("JOINPRIVADA", clientKey2);
 
     }
 
-    public void exitPrivada(String username1, String username2) throws IOException {
-        String roomKey = username1 + "+" + username2;
+    public void exitPrivada(String clientKey1, String clientKey2) throws IOException {
+        String roomKey = clientKey1 + "+" + clientKey2;
+        String user1 = usernames.get(clientKey1);
+        String user2 = usernames.get(clientKey2);
         chatRooms.remove(roomKey);
-        broadcast("Se Cerro Sala Privada entre " + roomKey);
-        sendPrivateMessage("EXITPRIVADA", username1);
-        sendPrivateMessage("EXITPRIVADA", username2);
+
+        broadcast("Se Cerro Sala Privada entre " + user1 + " y " + user2);
+        sendPrivateMessage("EXITPRIVADA", clientKey1);
+        sendPrivateMessage("EXITPRIVADA", clientKey2);
     }
 
     public void getAllUsers() throws IOException {
         StringBuilder allUsers = new StringBuilder();
 
-        for (String clientKey : clients.keySet()) {
-            allUsers.append(clientKey).append(",");
+        for (String clientKey : usernames.keySet()) {
+
+            allUsers.append(usernames.get(clientKey)).append(",");
         }
 
         // Eliminar la última coma si hay usuarios

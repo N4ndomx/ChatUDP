@@ -13,6 +13,7 @@ public class UDPClient {
     private int serverPort;
     private ChatClientUI ui;
     PrivateUI uip;
+    String username = System.getProperty("user.name");
 
     public UDPClient(String serverIP, int serverPort) throws SocketException, UnknownHostException {
         socket = new DatagramSocket();
@@ -21,7 +22,7 @@ public class UDPClient {
         this.ui = new ChatClientUI(this);
 
         // Enviar mensaje de conexión
-        sendMessage("CONNECT");
+        sendMessage("CONNECT:" + username);
     }
 
     public void sendMessage(String message) {
@@ -64,7 +65,7 @@ public class UDPClient {
     }
 
     public static void main(String[] args) throws SocketException, UnknownHostException {
-        UDPClient client = new UDPClient("192.168.1.68", 12345);
+        UDPClient client = new UDPClient("192.168.1.64", 12345);
         client.receiveMessages();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
